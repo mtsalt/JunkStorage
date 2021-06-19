@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Atari Brakeout</title>
+    <style>
+        body {
+            background: #b0c4de;
+            padding-top: 20px;
+            margin: auto 0;
+            text-align: center;
+        }
+
+        #canvas {
+            background: black;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <h1>Breakout</h1>
+        <div id="score_display">
+            <input type="button" id="btn1" value="GAME START" onclick="btnClick();" />
+            <div id="sample" style="margin: 1em;"></div>
+        </div>
+    </div>
+    <canvas id="canvas" width="700" height="500"></canvas>
+</body>
+
+</html>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let mX = 1;
+    let speed = 1;
+    let ball_x = canvas.width / 2;
+    let ball_y = canvas.height - 100;
+    let bar_base = canvas.width / 2 - 50;
+    let ball_base_x = canvas.width / 2;
+    let ball_base_y = canvas.height - 200;
+    let bar_x = canvas.width / 2 - 50;
+    let xsign = 1;
+    let ysign = 1;
+    let count = 0;
+    const max_play = 3;
+    let on_off = 0;
+    let init = 0;
+    let block_data = [];
+    let block_state = [];
+
+
+    function btnClick() {
+        if (on_off == 0) {
+            init_block(block_state);
+            document.getElementById("btn1").value = "INCREASE BALL SPEED";
+            alert('Can increase ball speed to push button again.');
+        }
+        draw();
+        on_off = 1;
+    }
+
+
+    document.onkeydown = function (e) {
+        switch (e.keyCode) {
+            case 37:
+                if (bar_x >= 0) {
+                    mX--;
+                }
+                break;
+            case 39:
+                if ((bar_x + 100) <= canvas.width) {
+                    mX++;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+
+    function draw_ball() {
+        if (ball_x < 0 || canvas.width < ball_x) {
+            xsign = -xsign;
+        }
+        if (ball_y < 0 || ball_y > canvas.height) {
+            ysign = -ysign
+        }
+        if (ball_y > canvas.height && count < max_play) {
+            if (count < max_play - 1) {
+                alert("Push OK to continue the game. " + "You can play " + (max_play - count - 1) + " more times");
+            }
+            count++;
+        }
+        ctx.beginPath();
+        ball_x = ball_x + xsign * 2;
+        ball_y = ball_y + ysign * 2;
+        ctx.arc(ball_x, ball_y, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = "#c0c0c0";
+        ctx.stroke();
+        ctx.fill();
+    }
+
+
+    function draw_bar() {
+        ctx.beginPath();
+        ctx.fillStyle = "#c0c0c0";
+        ctx.strokeStyle = "#f5f5f5";
+        ctx.stroke();
+        bar_x = bar_base + mX * 10;
+        ctx.fillRect(bar_x, 430, 100, 10);
+        if ((bar_x <= ball_x && ball_x < (bar_x + 100)) && ball_y == 430) {
+            ysign = -ysign;
+        }
+    }
+
+
+    function draw_block_one_line(line_num, color) {
+        var data_list = [];
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.stroke();
+        for (var i = 0; i < 9; i++) {
+            if (block_state[line_num][i] == 1) {
+                ctx.fillRect(70 * i, line_num * 32 + 10, 68, 30);
+            }
+            if (init < 6) {
+                var data = [70 * i, line_num * 32 + 10, 68, 30];
+                data_list.push(data);
+            }
+        }
+        if (block_state[line_num][9] == 1) {
+            ctx.fillRect(630, line_num * 32 + 10, 70, 30);
+        }
+        if (init < 6) {
+            data_list.push([70 * 9, line_num * 32 + 10, 70, 30]);
+        }
+        if (init < 6) {
+            block_data.push(data_list);
+        }
+        init++;
+    }
+
+    function draw_blocks() {
+        const line_color = ["red", "yellow", "green", "blue", "skyblue", "#4b0082"];
+        for (var i = 0; i < 6; i++) {
+            draw_block_one_line(i, line_color[i])
+        }
+    }
+
+    function is_game_over() {
+        if (count == max_play) {
+            ctx.font = "60px serif";
+            ctx.fillText("GAME OVER...", 70, canvas.height / 2 + 100);
+            ctx.font = "30px serif";
+            ctx.fillText("Reload this page for next game.", 60, canvas.height / 2 + 150);
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    }
+
+
+    function init_block(block_state) {
+        for (var i = 0; i < 6; i++) {
+            data = [];
+            for (var j = 0; j < 10; j++) {
+                data.push(1);
+            }
+            block_state.push(data);
+        }
+    }
+
+
+    function update() {
+        var break_flag = 0;
+        for (var i = 0; i < 6; i++) {
+            for (var j = 0; j < 10; j++) {
+                data = block_data[i][j];
+                if (is_collision(ball_x, ball_y, data) == 1 && block_state[i][j] == 1) {
+                    ctx.clearRect(data[0], data[1], data[2], data[3]);
+                    block_state[i][j] = 0;
+                    break_flag = 1;
+                    ysign = -ysign;
+                    break;
+                }
+                if (break_flag == 1) {
+                    break;
+                }
+            }
+        }
+    }
+
+
+    function is_collision(ball_x, ball_y, data) {
+        if ((data[0] <= ball_x) && (ball_x <= (data[0] + data[2])) && (data[1] <= ball_y) && (ball_y <= (data[1] + data[3]))) {
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    }
+
+
+    function is_complete() {
+        var result = 0;
+        for (var i = 0; i < 6; i++) {
+            for (var j = 0; j < 10; j++) {
+                result += block_state[i][j];
+            }
+        }
+        if (result == 0) {
+            ctx.font = "60px serif";
+            ctx.fillText("CONGRATS!", 80, canvas.height / 2 + 50);
+            ctx.font = "60px serif";
+            ctx.fillText("GAME COMPLETE!", 80, canvas.height / 2 + 100);
+            ctx.font = "30px serif";
+            ctx.fillText("Reload this page for next game.", 100, canvas.height / 2 + 150);
+            count = 100;
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        draw_blocks();
+        draw_ball();  // ボールを描画
+        update();
+
+        if ((is_game_over() == 0) && (is_complete() == 0)) {
+            draw_bar();
+        }
+        window.requestAnimationFrame(draw);
+    }
+</script>
